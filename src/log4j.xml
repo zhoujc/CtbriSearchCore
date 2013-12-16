@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration>
+
+	<appender name="CONSOLE" class="org.apache.log4j.ConsoleAppender">
+		<layout class="org.apache.log4j.PatternLayout">
+  		     <!--param name="ConversionPattern" value="%-5p - %m%n"/-->
+  		      <param name="ConversionPattern"
+                            value="%-5p %C{2} (%F:%L) - %m%n"  />
+		</layout>
+	</appender>
+
+	<appender name="TEMP" class="org.apache.log4j.DailyRollingFileAppender">
+		<param name="File" value="log/ctbrisearchtst-log.txt"/>
+		<param name="Append" value="true"/>
+        <param name="Encoding" value="gbk"/> 
+        <param name="DatePattern" value="'.'yyyy_MM_dd'.txt'" /> 
+		<layout class="org.apache.log4j.PatternLayout">
+  		     <param name="ConversionPattern"
+                            value="%d - %m%n"/>
+		</layout>
+	</appender>
+
+ 	<logger name="map.info">
+ 		<level value="info"/>
+ 		<appender-ref ref="CONSOLE"/> 	
+ 	</logger>
+	
+ 	<logger name="map.info.file">
+ 		<level value="info"/>
+ 		<appender-ref ref="TEMP"/> 		
+ 	</logger>
+
+
+
+   <!--
+	<root>
+		<priority value="fatal"/>
+		<appender-ref ref="TEMP"/>
+		<appender-ref ref="CONSOLE"/>
+	</root>	
+	-->
+</log4j:configuration>

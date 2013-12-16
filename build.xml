@@ -1,0 +1,280 @@
+<project name="pta_search" default="compile" basedir=".">
+	<tstamp>
+		<format property="TSTAMP"
+		pattern="HHmmss"
+		offset="0" unit="minute"/>
+	</tstamp>
+	<!-- set global properties for this build -->
+	<property file="build.properties"/>
+	<!-- ClassPath definition -->
+	<path id="cp">
+		<fileset dir="${lib}">
+			<include name="**/*.jar"/>
+		</fileset>
+		<pathelement location="${build}"/>
+	</path>
+
+	<taskdef resource="tasks.properties"/>
+	
+	<!-- ant all to build whole project -->
+	<target name="all">
+		<antcall target="clean"/>
+		<antcall target="init"/>
+		<antcall target="compile"/>
+		<antcall target="javadoc"/>
+		<antcall target="dist"/>
+
+	</target>
+	<!-- clean all ant generation forders -->
+	<target name="clean" description="Clean up all non source(java,web,conf) directories. ">
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+		<!--delete dir="${doc}"></delete-->
+	</target>
+	<!-- make directory,init the environment  -->
+	<target name="init">
+		<mkdir dir="${doc}"/>
+		<mkdir dir="${api}"/>
+		<mkdir dir="${report}"/>
+		<mkdir dir="${build}"/>
+		<mkdir dir="${dist}"/>
+		<mkdir dir="${log}"/>
+		<mkdir dir="${tag}"/>
+		<mkdir dir="${dic}"/>
+		<echo message="-----${DSTAMP} ${TSTAMP}-----"/>
+	</target>
+
+	<target name="compile" depends="clean ,init">
+		<!-- compile source code  -->
+		<javac srcdir="${src}" destdir="${build}" compiler="modern" debug="true" encoding="GBK">
+			<classpath refid="cp"/>		
+		</javac>
+		<!-- compile test source code                 
+		<javac srcdir="${src-test}" destdir="${build}" compiler="modern" debug="on" encoding="UTF-8" source="1.4">
+			<classpath refid="cp"/>
+		</javac>
+		-->
+		<!-- Copy config file to build directorymp -->
+		<copy todir="${build}">
+			<fileset dir="${src}">
+				<include name="**/*.jpg"/>
+				<include name="**/*.bmp"/>
+				<include name="**/*.xml"/>
+				<include name="**/*.properties"/>
+			</fileset>
+		</copy>
+		<!-- coding the properties file -->
+		<!--delete>
+			<fileset dir="${build}">
+				<include name="**/*.properties"/>
+			</fileset>
+		</delete-->
+		<native2ascii encoding="GBk" dest="${build}" src="${src}" includes="**/*.properties"/>
+	</target>
+
+	<!-- ================================= 
+          target: run_test              
+         ================================= -->
+	<!--path id="testclasspath">
+		<path refid="cp"></path>
+		<pathelement location="${build}"/>
+	</path-->
+    <target name="run_test"  depends="compile" description="运行所有的juint测试">
+    	<mkdir dir="${reportXML}"/>
+	    <mkdir dir="${reportHtml}"/>
+	    <junit printsummary="yes" haltonfailure="no" fork="true">
+             <classpath refid="cp"/>
+	    	 <formatter type="plain"/>
+             <formatter type="xml"/>	    	
+             <batchtest fork="yes" todir="${reportXML}">
+                <fileset dir="${src}" includes="**/Test*.java"/>
+             	<fileset dir="${src}" includes="**/*Test.java"/>
+             </batchtest>
+	     </junit>
+	     <junitreport todir="${reportHtml}">
+             <fileset dir="${reportXML}">
+                  <include name="*.xml"/>
+             </fileset>
+             <report format="frames" todir="${reportHtml}"/>
+	      </junitreport>
+    </target>
+
+	<!--target name="test"  description="jar the source code,and copy the lib to dir dist">
+		
+		<echo>${TSTAMP}</echo>
+	</target-->
+	<!-- ====================================================== -->
+	<!-- jar                                                    -->
+	<!-- ====================================================== -->
+	<target name="dist" depends="compile" description="jar the source code,and copy the lib to dir dist">
+		<echo>${mainClass}</echo>
+
+	 	<jar jarfile="${dist}/${final.name}_${visionName}.jar">
+	 		
+	 		<fileset dir="${build}">
+	 			<include name="**/**.class"/>
+	 			<exclude name="org/apache/lucene/**"/>
+	 			<exclude name="test**"/>
+	 			<exclude name="**/Test*.class"/>
+	 			<exclude name="**/*Test.class"/>
+	 		</fileset>
+	 		
+
+	 		<fileset dir="${api}">
+	 			<include name="**/**"/>
+	 		</fileset>
+	 		<manifest>
+	 			<attribute name="Main-Class" value="${mainClass}"/>
+	 		</manifest>
+	 	</jar>
+
+		<!-- -->
+		
+		<copy todir="${dist}">
+			<fileset dir="${build}">
+				<include name="**/*.jpg"/>
+				<include name="**/*.bmp"/>
+				<include name="**/*.xml"/>
+				<include name="**/*.properties"/>
+			</fileset>
+		</copy>
+		<copy todir="${dist}">
+			<fileset dir="${lib}">
+				<include name="**/*.jar"/>
+				<include name="**/*.xml"/>
+				<include name="**/*.properties"/>
+			</fileset>
+		</copy>
+		<echo>copy jar to svn dir</echo>
+		<copy todir="${svndir}" file="${dist}/${final.name}_${visionName}.jar"></copy>
+		<copy todir="${depdir}" file="${dist}/${final.name}_${visionName}.jar"></copy>
+		
+		<echo>back up source code</echo>
+		<mkdir dir="${tag}/src_${visionName}_${version}"/>
+		<copy todir="${tag}/src_${visionName}_${version}">
+					<fileset dir="${src}">
+						<include name="**/*.java"/>
+						<include name="**/*.xml"/>
+						<include name="**/*.properties"/>
+					</fileset>
+		</copy>
+
+	</target>
+	
+	
+	<target name="obfuscate" depends="dist">
+		    <taskdef name="obfuscate"
+		    	classname="com.yworks.yguard.ObfuscatorTask" classpathref="cp" />
+			<obfuscate mainclass="${mainclass}" logfile="${obfuscationlog}" replaceclassnamestrings="true">
+			           <inoutpair in="${dist}/${final.name}_${visionName}.jar" 
+			           	out="${dist}/${final.name}_${visionName}_re.jar" />
+				<expose>
+					<class classes="protected" methods="public" fields="protected">
+						<patternset id="catic">
+				        </patternset>
+					</class>	
+					 <class classes="protected" methods="public" fields="protected">
+	                         <patternset id="catic">
+	                         	<include name="com.mapbar.search.pojo.**"/>  
+	                         	<include name="com.mapbar.search.ana.ele.impl.**"/> 
+	                         	<include name="com.mapbar.search.ana.LocalQuery"/>
+	                         	<include name="com.mapbar.search.ana.analysis.LocalAnalyzer"/>
+	                         	<include name="com.mapbar.search.prc.Resort"/>
+	                         	<include name="com.mapbar.search.srh.Retriever"/>
+	                         </patternset>
+	                 </class>
+					<class classes="public" methods="public" fields="protected">
+						<patternset>
+							<include name="com.mapbar.utilnew.**"/>
+							<include name="com.mapbar.search.prc.utils.USort"/>
+							</patternset>
+					</class>
+					<class classes="private" methods="private" fields="private">
+						<patternset>
+						<include name="com.mapbar.search.C"/>
+						<include name="com.mapbar.common.U"/>
+						</patternset>
+					</class>
+					<class classes="public" methods="protected" fields="protected">
+							<patternset>
+								<include name="com.mapbar.search.ana.analysis.MapbarSegTokenizer"/>
+								<include name="com.mapbar.search.ana.analysis.impl.PPAnalyzer"/>
+								<include name="com.mapbar.search.ana.analysis.impl.WordAnalyzer"/>
+								<include name="com.mapbar.search.ana.analysis.impl.AddressAnalyzer"/>
+								<include name="com.mapbar.search.ana.analysis.impl.SameKeywordAnalyzer"/>
+								<include name="com.mapbar.search.ana.analysis.MapbarSegAnalyzer"/>
+								
+							</patternset>
+						</class>
+				</expose>
+		    </obfuscate>
+			
+			<echo>copy jar to svn dir</echo>
+					
+			<copy todir="${svndir}" file="${dist}/${final.name}_${visionName}_re.jar"></copy>
+			<copy todir="${depdir}" file="${dist}/${final.name}_${visionName}_re.jar"></copy>
+		</target>
+	<!-- generate javadoc -->
+		<target name="javadoc" description="general java doc">
+			<javadoc packagenames="com.mapbar.*" sourcepath="src" defaultexcludes="yes" destdir="${api}" author="true" version="true" use="true" Encoding="GBK" charset="GBK" 
+				docencoding="GBK" windowtitle="Test API">
+				<doctitle><![CDATA[<h1>电信研究院  定位技术与应用产品线</h1>]]></doctitle>
+				<bottom><![CDATA[<i>Copyright &#169; 电信研究院  定位技术与应用产品线  All Rights Reserved.</i>]]></bottom>
+			</javadoc>
+			<copy todir="${api}">
+				<fileset dir="${src}">
+					<include name="**/*.gif"/>
+					<include name="**/*.jpg"/>
+					<include name="**/*.png"/>
+				</fileset>
+			</copy>
+		</target>
+	
+	<!--target name="dist" depends="compile" description="dist the program">
+		//<!- Create the dist directory structure used by compile and copy the deployment descriptors into it> 要注释的
+		<copy todir="${dist}/WEB-INF/classes">
+			<fileset dir="${build}">
+				<include name="**/*.*"/>
+				<exclude name="hibernate.cfg.xml.template"/>
+			</fileset>
+		</copy>
+		<copy todir="${dist}/WEB-INF/lib" flatten="true">
+			<fileset dir="${lib}">
+				<include name="**/*.jar"/>
+				<include name="**/register/*.dll"/>
+				<exclude name="**/unittest/**.*"/>
+				<exclude name="**/xdoclet**.*"/>
+				<exclude name="**/xjavadoc**.*"/>
+				<exclude name="**/jasper**.*"/>
+				<exclude name="catalina/naming-resources.jar"/>
+				<exclude name="catalina/tomcat-util.jar"/>
+				//<!-exclude name="servlet.jar"/>//要注释的
+				<exclude name="hibernate-tools.jar"/>
+			</fileset>
+		</copy>
+	</target-->
+
+	<target name="initDB" description="initialize the database">
+		<echo>do not finished</echo>
+		<!--java classname="com.mapbar.CreateMysqlDB">
+			<classpath refid="cp"/>
+			<arg value="${db_driver}" />
+			<arg value="${db_url_ant}" />
+			<arg value="${db_name}" />
+			<arg value="${db_username}"/>
+			<arg value="${db_password}}"/>
+		</java>
+		<sql encoding="GB18030" driver="${db_driver}" url="${db_url_ant}" userid="${db_username}" password="${db_password}" onerror="continue">
+			<transaction src="${sql}/schema.sql"/>
+			<transaction src="${sql}/dictionary.sql"/>
+			<transaction src="${sql}/poweruser.sql"/>
+			<transaction src="${sql}/unique_key.sql"/>
+			<classpath refid="cp"/>
+		</sql-->
+		
+	</target>
+
+
+	
+	
+</project> 
